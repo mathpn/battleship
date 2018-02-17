@@ -160,7 +160,7 @@ if __name__ == '__main__':
                     prob[row, i] = 0
         return prob
 
-    def probability_mixed(board, hit, count, ships, size):
+    def probability_mixed(board, hit, ships, size):
         prob = probability_attack(board, hit, ships, size)
         prob2 = probability_hunt(board, ships, size, hit)
         count = 0
@@ -168,18 +168,21 @@ if __name__ == '__main__':
             count = 1
         elif len(hit) > 1 and hit[-2][1] == hit[-1][1] and sum(prob[:, hit[-1][ 1]]) == 0:
             count = 1
-        if len(hit) > 1 and hit[-2][0] == hit[-1][0]:
+        elif len(hit) > 2 and ((hit[-1][0] != hit[-2][0] and hit[-2][0] == hit[-3][0])\
+        or hit[-1][1] != hit[-2][1] and hit[-2][1] == hit[-3][1]):
+            count = 1
+        elif len(hit) > 1 and hit[-2][0] == hit[-1][0]:
             prob[hit[-1][0], :] = np.prod([prob[hit[-1][0], :], 3])
         elif len(hit) > 1 and hit[-2][1] == hit[-1][1]:
             prob[:, hit[-1][1]] = np.prod([prob[:, hit[-1][1]], 3])
-        if np.amax(prob) > 0:
+        elif np.amax(prob) > 0:
             prob = np.divide(prob, np.amax(prob))
         prob = prob * (1 - (1/2) * count)
         prob2 = prob2 * (1/2) * count
         prob3 = np.add(prob, prob2)
         return prob3
 
-    def computer(level, status, count, ships):
+    def computer(level, status, ships):
         guess_row = []
         guess_col = []
         change = False
@@ -192,7 +195,7 @@ if __name__ == '__main__':
             return [guess_row, guess_col]
         elif level == 1:
             if status == 1 and miss <= 3:
-                prob = probability_mixed(board, hit, count, ships, size)
+                prob = probability_mixed(board, hit, ships, size)
             elif status == 1 and miss > 3:
                 change = True
                 prob = probability_hunt(board, ships, size, hit)
@@ -255,7 +258,6 @@ if __name__ == '__main__':
     turn = 1
     status = 0
     miss = 0
-    count = 0
     hit = []
     comp_guess = []
     points_human = 0
@@ -278,35 +280,35 @@ if __name__ == '__main__':
             guess_col = int(guess_col) - 1
             complete = False
 
-            if ships_comp[guess_row][guess_col] == 1:
-                print("How could you, human? You hit one of my battleships!")
-                board2[guess_row][guess_col] = "B"
-                ships_comp[guess_row][guess_col] = 0
-                valid = True
+            if (guess_row < 0 or guess_row > (size - 1)) or (guess_col < 0 or guess_col > (size - 1)):
+                print("Oops, that's not even in the ocean.")
+            elif board2[guess_row][guess_col] != 'O':
+                print("You guessed that one already.")
             else:
-                if (guess_row < 0 or guess_row > (size - 1)) or (guess_col < 0 or guess_col > (size - 1)):
-                    print("Oops, that's not even in the ocean.")
-                elif board2[guess_row][guess_col] != 'O':
-                    print("You guessed that one already.")
-                else:
-                    print("You missed my battleships, idiot!")
-                    board2[guess_row][guess_col] = "X"
-                    valid = True
+                 valid = True
+            input('Press enter to continue...')
+
+        if ships_comp[guess_row][guess_col] == 1:
+            print("How could you, human? You hit one of my battleships!")
+            board2[guess_row][guess_col] = "B"
+            ships_comp[guess_row][guess_col] = 0
+            print_board(board2)
+            input('Press enter to continue...')
+        else:
+            print("You missed my battleships, idiot!")
+            board2[guess_row][guess_col] = "X"
+            print_board(board2)
             input('Press enter to continue...')
                     
         print('The Computer vision of your board:')
         print_board(board)
-        if len(hit) > 2 and ((hit[-1][0] != hit[-2][0] and hit[-2][0] == hit[-3][0])\
-        or hit[-1][1] != hit[-2][1] and hit[-2][1] == hit[-3][1]):
-            count = 0
 
-        comp_guess = computer(level, status, count, ships)
+        comp_guess = computer(level, status, ships)
 
         if comp_guess[-1]:
             status = 0
             hit = []
             miss = 0
-            count = 0
 
         guess_row2 = comp_guess[0]
         guess_col2 = comp_guess[1]
@@ -317,16 +319,15 @@ if __name__ == '__main__':
             board[guess_row2][guess_col2] = 'B'
             ships_human[guess_row2][guess_col2] = 0
             hit.append([guess_row2, guess_col2])
+            print_board(board)
             status = 1
             miss = 0
-            count += 0.5
             complete = True
         if not complete:
             print("The Computer missed your Battleships. Simply bad luck.")
             board[guess_row2][guess_col2] = "X"
+            print_board(board)
             miss += 1
-            if status == 1:
-                count += 1.2
         points_human = check_points(ships_comp, size)
         points_comp = check_points(ships_human, size)
         if points_comp and not points_human:
