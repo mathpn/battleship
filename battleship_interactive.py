@@ -14,6 +14,7 @@ from copy import deepcopy as dc
 from math import sqrt
 from random import randint, choice
 from os import system
+from typing import List
 
 import numpy as np
 
@@ -29,20 +30,20 @@ def print_board(board):
         print(f"{i + 1}{spacement}{row_spacement.join(row)}")
 
 
-def create_ships(board, ships):
-    for ship in range(0, len(ships)):
+def create_ships(board, ship_sizes: List[int]):
+    for size in ship_sizes:
         # genereate random coordinates and validate the postion
         valid = False
         while not valid:
-            x = randint(1, 10 - ships[ship])-1
-            y = randint(1, 10 - ships[ship])-1
+            x = randint(1, 10 - size)-1
+            y = randint(1, 10 - size)-1
             o = randint(0, 1)
             if o == 0:
                 ori = "v"
             else:
                 ori = "h"
-            valid = validate(board,ships[ship],x,y,ori)
-        board = place_ship(board,ships[ship],ori,x,y)
+            valid = validate(board,size,x,y,ori)
+        board = place_ship(board,size,ori,x,y)
     return board
 
 
@@ -60,17 +61,16 @@ def place_ship(board, ship, ori, x, y):
 def validate(board, ship, x, y, ori):
     if ori == "v" and x+ship > 10:
         return False
-    elif ori == "h" and y+ship > 10:
+    if ori == "h" and y+ship > 10:
         return False
-    else:
-        if ori == "v":
-            for i in range(0, ship):
-                if board[x+i][y] != 0:
-                    return False
-        elif ori == "h":
-            for i in range(0, ship):
-                if board[x][y+i] != 0:
-                    return False
+    if ori == "v":
+        for i in range(0, ship):
+            if board[x+i][y] != 0:
+                return False
+    if ori == "h":
+        for i in range(0, ship):
+            if board[x][y+i] != 0:
+                return False
     return True
 
 
@@ -104,11 +104,10 @@ def distance(hit, i):
     if hit.index(i) == (len(hit) - 1):
         dist = 0.1
         return dist
-    else:
-        horizontal = i[0] - hit[hit.index(i) + 1][0]
-        vertical = i[1] - hit[hit.index(i) + 1][1]
-        dist = sqrt(horizontal ** 2 + vertical ** 2)
-        return dist
+    horizontal = i[0] - hit[hit.index(i) + 1][0]
+    vertical = i[1] - hit[hit.index(i) + 1][1]
+    dist = sqrt(horizontal ** 2 + vertical ** 2)
+    return dist
 
 
 def probability_attack(board, hit, ships, size):
@@ -120,8 +119,8 @@ def probability_attack(board, hit, ships, size):
                     for k in range(i[1] - ship + 1, i[1] + 1):
                         if k >= 0:
                             if 'X' not in board[row][k:k + ship]:
-                                    if (k + ship) < len(board[0]):
-                                        prob[row, k:k + ship] += (1 - 0.1 * (1.5 * distance(hit, i) - hit.index(i)))
+                                if (k + ship) < len(board[0]):
+                                    prob[row, k:k + ship] += (1 - 0.1 * (1.5 * distance(hit, i) - hit.index(i)))
         for col in range(0, len(board[0])):
             column = []
             for i in hit:
@@ -131,8 +130,8 @@ def probability_attack(board, hit, ships, size):
                             for row in range(0, len(board[0])):
                                 column.append(board[row][col])
                             if 'X' not in column[k:k + ship]:
-                                    if (k + ship) < len(board[0]):
-                                        prob[k:k + ship, col] += (1 - 0.1 * (1.5 * distance(hit, i) - hit.index(i)))
+                                if (k + ship) < len(board[0]):
+                                    prob[k:k + ship, col] += (1 - 0.1 * (1.5 * distance(hit, i) - hit.index(i)))
     for i in hit:
         prob[i[0], i[1]] = 0
     for row in range(0, len(board[0])):
@@ -177,27 +176,27 @@ def computer(board, size, hit, miss, level, status, ships):
             guess_row = choice(range(0, size))
             guess_col = choice(range(0, size))
         return [guess_row, guess_col]
-    elif level == 1:
-        if status == 1 and miss <= 3:
-            prob = probability_mixed(board, hit, ships, size)
-        elif status == 1 and miss > 3:
-            change = True
-            prob = probability_hunt(board, ships, size, hit)
-        else:
-            prob = probability_hunt(board, ships, size, hit)
-        maximum = np.argwhere(prob == np.amax(prob))
-        if np.amax(prob) != 0:
-            index = choice(range(0, maximum.shape[0]))
-            guess_row = maximum[index, 0]
-            guess_col = maximum[index, 1]
-        else:
+
+    if status == 1 and miss <= 3:
+        prob = probability_mixed(board, hit, ships, size)
+    elif status == 1 and miss > 3:
+        change = True
+        prob = probability_hunt(board, ships, size, hit)
+    else:
+        prob = probability_hunt(board, ships, size, hit)
+    maximum = np.argwhere(prob == np.amax(prob))
+    if np.amax(prob) != 0:
+        index = choice(range(0, maximum.shape[0]))
+        guess_row = maximum[index, 0]
+        guess_col = maximum[index, 1]
+    else:
+        guess_row = choice(range(0, size))
+        guess_col = choice(range(0, size))
+        while board[guess_row][guess_col] != 'O':
             guess_row = choice(range(0, size))
             guess_col = choice(range(0, size))
-            while board[guess_row][guess_col] != 'O':
-                guess_row = choice(range(0, size))
-                guess_col = choice(range(0, size))
-        #plt.imshow(prob, interpolation = 'nearest')
-        #plt.show()
+    #plt.imshow(prob, interpolation = 'nearest')
+    #plt.show()
     return [guess_row, guess_col, change]
 
 
@@ -234,29 +233,29 @@ def main():
     level = int(level) - 1
 
     while  not isint(size) or size < 10:
-        print('Oops! The size should be at least 10x10!')
+        size = input('Oops! The size should be at least 10!')
 
     board = []
     board_ships = []
     board2_ships = []
     board2 = []
 
-    for x in range(size):
+    for _ in range(size):
         board.append(["O"] * size)
 
-    for x in range(size):
+    for _ in range(size):
         board_ships.append([0] * size)
 
-    for x in range(size):
+    for _ in range(size):
         board2.append(["O"] * size)
 
-    for x in range(size):
+    for _ in range(size):
         board2_ships.append([0] * size)
 
-    ships = [5, 4, 3, 3, 2]
+    ship_sizes = [5, 4, 3, 3, 2]
 
-    ships_human = create_ships(board_ships, ships)
-    ships_comp = create_ships(board2_ships, ships)
+    ships_human = create_ships(board_ships, ship_sizes)
+    ships_comp = create_ships(board2_ships, ship_sizes)
 
     system('cls||clear')
     print('There are 5 Battleships in each board. \n One of size 5x1, other of size 2x1, two of size 3x1 and the last of size 2x1 \n Your goal is to sink your oponent\'s ships before he sinks yours!')
@@ -314,7 +313,7 @@ def main():
         print('The Computer vision of your board:')
         print_board(board)
 
-        comp_guess = computer(board, size, hit, miss, level, status, ships)
+        comp_guess = computer(board, size, hit, miss, level, status, ship_sizes)
 
         if comp_guess[-1]:
             status = 0
