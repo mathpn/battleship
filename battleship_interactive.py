@@ -20,7 +20,10 @@ import numpy as np
 
 def print_board(board):
     row_spacement = ' ' if len(board) <= 10 else '  '
-    print(f"   {row_spacement.join([str(i) for i in range(1, len(board) + 1)])}")
+    print(
+        f"   {row_spacement.join([str(i + 1) for i in range(10)])}"
+        f" {' '.join([str(i + 1) for i in range(10, len(board))])}"
+    )
     for i, row in enumerate(board):
         spacement = '  ' if (i + 1) < 10 else ' '
         print(f"{i + 1}{spacement}{row_spacement.join(row)}")
